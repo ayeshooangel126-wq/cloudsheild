@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background:#0a1628;
+            font-family:'Segoe UI',sans-serif;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            min-height:100vh;
+            padding:20px;
+        }
+        .container {
+            background:#132b5a;
+            max-width:400px;
+            padding:40px;
+            border-radius:16px;
+            border:1px solid #1a3b7a;
+            width:100%;
+        }
+        h1 { color:#ff1744; text-align:center; margin-bottom:8px; }
+        .sub { color:#8899b0; text-align:center; margin-bottom:24px; }
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; color:#c0d0e0; margin-bottom:6px; }
+        .form-group input {
+            width:100%; padding:12px; background:#0d1f3c;
+            border:1px solid #1a3b7a; border-radius:8px; color:#e0e8f0;
+        }
+        .btn {
+            width:100%; padding:12px; border:none; border-radius:8px;
+            font-weight:bold; cursor:pointer;
+        }
+        .btn-primary { background:#ff1744; color:white; }
+        .btn-primary:hover { background:#d50000; }
+        .alert {
+            padding:10px; border-radius:8px; margin-bottom:16px; display:none;
+        }
+        .alert-success { background:#1b5e20; color:#a5d6a7; display:block; }
+        .alert-danger { background:#b71c1c; color:#ef9a9a; display:block; }
+        .links { text-align:center; margin-top:16px; }
+        .links a { color:#00d4ff; text-decoration:none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Admin Login</h1>
+        <p class="sub">Secret admin access</p>
+        <div id="alertBox" class="alert"></div>
+
+        <form id="adminLoginForm">
+            <div class="form-group">
+                <label>Admin Email</label>
+                <input type="email" id="email" value="ayeshooangel126@gmail.com" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter admin password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+
+        <div class="links">
+            <a href="/">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/admin_login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                const box = document.getElementById('alertBox');
+
+                if (data.success) {
+                    box.className = 'alert alert-success';
+                    box.textContent = '✅ ' + data.message;
+                    box.style.display = 'block';
+                    setTimeout(() => window.location.href = '/admin_secret', 1000);
+                } else {
+                    box.className = 'alert alert-danger';
+                    box.textContent = '❌ ' + data.message;
+                    box.style.display = 'block';
+                }
+            } catch(err) {
+                alert('Error: ' + err.message);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CloudShield - Terms</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background:#0a1628;
+            font-family:'Segoe UI',sans-serif;
+            color:#e0e8f0;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            min-height:100vh;
+            padding:20px;
+        }
+        .container {
+            background:#132b5a;
+            max-width:500px;
+            padding:40px;
+            border-radius:16px;
+            border:1px solid #1a3b7a;
+        }
+        h1 { color:#00d4ff; text-align:center; margin-bottom:20px; }
+        .terms-box {
+            background:#0d1f3c;
+            padding:20px;
+            border-radius:12px;
+            margin-bottom:20px;
+            max-height:350px;
+            overflow-y:auto;
+        }
+        .terms-box ul { padding-left:20px; color:#c0d0e0; font-size:14px; line-height:2; }
+        .terms-box ul li { margin-bottom:8px; }
+        .checkbox-group {
+            display:flex;
+            align-items:center;
+            gap:12px;
+            margin-bottom:20px;
+        }
+        .checkbox-group input { width:20px; height:20px; accent-color:#00d4ff; cursor:pointer; }
+        .btn {
+            width:100%; padding:14px; border:none; border-radius:12px;
+            font-size:16px; font-weight:bold; cursor:pointer;
+        }
+        .btn-primary { background:#00d4ff; color:#0a1628; }
+        .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+        .links { text-align:center; margin-top:15px; }
+        .links a { color:#00d4ff; text-decoration:none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Terms & Policy</h1>
+        <div class="terms-box">
+            <ul>
+                <li>CloudShield monitors files and network activity for security purposes</li>
+                <li>Your data is encrypted and stored securely</li>
+                <li>Admin may review anonymized data for security analysis</li>
+                <li>You will receive alerts about potential threats</li>
+                <li>You can delete your account anytime</li>
+                <li>By accepting, you agree to monitoring</li>
+            </ul>
+        </div>
+        <div class="checkbox-group">
+            <input type="checkbox" id="termsCheck" onchange="toggleBtn()">
+            <label for="termsCheck" style="color:#c0d0e0;font-size:14px;">I agree to the Terms & Policy</label>
+        </div>
+        <button id="acceptBtn" class="btn btn-primary" disabled onclick="acceptTerms()">Accept & Continue</button>
+        <div class="links">
+            <a href="/login">← Back to Login</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleBtn() {
+            document.getElementById('acceptBtn').disabled = !document.getElementById('termsCheck').checked;
+        }
+
+        async function acceptTerms() {
+            try {
+                const response = await fetch('/api/accept_terms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Terms accepted!');
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            } catch(err) {
+                alert('Error: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

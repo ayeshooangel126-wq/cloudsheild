@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify OTP - CloudShield</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a1628;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: #132b5a;
+            max-width: 400px;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid #1a3b7a;
+            width: 100%;
+        }
+        h1 { color: #00d4ff; text-align: center; margin-bottom: 8px; }
+        p.sub { color: #8899b0; text-align: center; margin-bottom: 24px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; color: #c0d0e0; margin-bottom: 6px; }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: #0d1f3c;
+            border: 1px solid #1a3b7a;
+            border-radius: 8px;
+            color: #e0e8f0;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 4px;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #00d4ff;
+            border: none;
+            border-radius: 8px;
+            color: #0a1628;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn:hover { background: #00b8d4; }
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #1a3b7a;
+            color: #8899b0;
+            margin-top: 10px;
+        }
+        .btn-secondary:hover { background: #1a3b7a; }
+        .alert {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .alert-success { background: #1b5e20; color: #a5d6a7; display: block; }
+        .alert-danger { background: #b71c1c; color: #ef9a9a; display: block; }
+        .links { text-align: center; margin-top: 16px; }
+        .links a { color: #00d4ff; text-decoration: none; }
+        .resend {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 14px;
+            color: #8899b0;
+        }
+        .resend a { color: #00d4ff; cursor: pointer; text-decoration: underline; }
+        .email-display {
+            background: #0d1f3c;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            color: #c0d0e0;
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Verify Email</h1>
+        <p class="sub">Enter the 6-digit OTP sent to your email</p>
+
+        <div class="email-display" id="emailDisplay">📧 Loading email...</div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <form id="otpForm">
+            <div class="form-group">
+                <label>OTP Code</label>
+                <input type="text" id="otp" placeholder="------" maxlength="6" required>
+            </div>
+            <button type="submit" class="btn">✅ Verify OTP</button>
+        </form>
+
+        <div class="resend">
+            Didn't receive OTP? <a onclick="resendOTP()">Resend OTP</a>
+        </div>
+
+        <div class="links">
+            <a href="/login">← Back to Login</a>
+        </div>
+    </div>
+
+    <script>
+        // Get email from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        document.getElementById('emailDisplay').textContent = '📧 ' + (email || 'Email not found');
+
+        if (email) {
+            localStorage.setItem('pending_email', email);
+        }
+
+        // ===== VERIFY OTP =====
+        document.getElementById('otpForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const otp = document.getElementById('otp').value.trim();
+            const email = localStorage.getItem('pending_email');
+
+            if (!email) {
+                showAlert('danger', 'Email not found! Please sign up again.');
+                return;
+            }
+
+            if (otp.length !== 6) {
+                showAlert('danger', 'Please enter 6-digit OTP');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/verify_otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('success', '✅ ' + data.message);
+                    setTimeout(() => {
+                        window.location.href = '/terms?email=' + encodeURIComponent(email);
+                    }, 1500);
+                } else {
+                    showAlert('danger', '❌ ' + data.message);
+                }
+            } catch (err) {
+                showAlert('danger', 'Error: ' + err.message);
+            }
+        });
+
+        // ===== RESEND OTP =====
+        async function resendOTP() {
+            const email = localStorage.getItem('pending_email');
+            if (!email) {
+                showAlert('danger', 'Email not found! Please sign up again.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/resend_otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('success', '✅ ' + data.message);
+                } else {
+                    showAlert('danger', '❌ ' + data.message);
+                }
+            } catch (err) {
+                showAlert('danger', 'Error: ' + err.message);
+            }
+        }
+
+        function showAlert(type, message) {
+            const box = document.getElementById('alertBox');
+            box.className = 'alert alert-' + type;
+            box.textContent = message;
+            box.style.display = 'block';
+            setTimeout(() => { box.style.display = 'none'; }, 5000);
+        }
+    </script>
+</body>
+</html>
