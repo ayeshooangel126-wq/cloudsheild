@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CloudShield - Admin Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a1628;
+            font-family: 'Segoe UI', sans-serif;
+            color: #e0e8f0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: #ff1744; margin-bottom: 5px; }
+        h1 span { color: #00d4ff; }
+        .sub { color: #8899b0; margin-bottom: 20px; }
+        .nav {
+            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+        }
+        .nav a {
+            color: #00d4ff; text-decoration: none; padding: 8px 16px;
+            background: #0d1f3c; border-radius: 8px;
+        }
+        .nav a:hover { background: #1a3b7a; }
+        .nav a.active { background: #ff1744; color: white; }
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px; margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #132b5a; padding: 16px 18px;
+            border-radius: 12px; border: 1px solid #1a3b7a;
+        }
+        .stat-card .number { font-size: 28px; font-weight: 700; color: #00d4ff; }
+        .stat-card .number.danger { color: #ff1744; }
+        .stat-card .label { color: #8899b0; font-size: 13px; margin-top: 4px; }
+        .card {
+            background: #132b5a; border-radius: 12px;
+            border: 1px solid #1a3b7a; padding: 20px; margin-bottom: 20px;
+        }
+        .card h2 { color: #00d4ff; font-size: 16px; margin-bottom: 14px; }
+        .user-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr auto;
+            gap: 10px;
+            padding: 12px;
+            background: #0d1f3c;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+            font-size: 13px;
+        }
+        .user-row.header {
+            background: transparent;
+            color: #8899b0;
+            font-weight: 600;
+        }
+        .btn {
+            padding: 4px 12px; border: none; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 12px;
+        }
+        .btn-primary { background: #00d4ff; color: #0a1628; }
+        .btn-primary:hover { background: #00b8d4; }
+        .btn-danger { background: #ff1744; color: white; }
+        .btn-danger:hover { background: #d50000; }
+        .btn-success { background: #00e676; color: #0a1628; }
+        .btn-success:hover { background: #00c853; }
+        .status-online { color: #00e676; }
+        .status-offline { color: #8899b0; }
+        .badge {
+            padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;
+        }
+        .badge-danger { background: #ff1744; color: white; }
+        .badge-warning { background: #ffc107; color: #0a1628; }
+        .badge-success { background: #00e676; color: #0a1628; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/admin_monitor" class="active">🔍 Remote Monitor</a>
+            <a href="/dashboard">📊 Dashboard</a>
+            <a href="/" onclick="location.href='/'">🚪 Logout</a>
+        </div>
+
+        <h1>🔴 <span>Remote</span> Admin Monitor</h1>
+        <p class="sub">All users are being monitored remotely. You have full visibility.</p>
+
+        <div class="card">
+            <h2>👥 Monitored Users (Terms Accepted)</h2>
+            <div class="user-row header">
+                <span>User</span>
+                <span>Device</span>
+                <span>IP Address</span>
+                <span>Alerts</span>
+                <span>Action</span>
+            </div>
+            <div id="usersList">
+                {% for user in users %}
+                <div class="user-row">
+                    <span>{{ user.email }}</span>
+                    <span style="font-size:11px;color:#8899b0;">{{ user.device_info[:30] }}...</span>
+                    <span style="font-size:11px;color:#8899b0;">{{ user.ip_address }}</span>
+                    <span>
+                        <span class="badge {% if user.active_alerts > 0 %}badge-danger{% else %}badge-success{% endif %}">
+                            {{ user.active_alerts }}
+                        </span>
+                    </span>
+                    <span>
+                        <button class="btn btn-primary" onclick="remoteScan({{ user.id }})">🔍 Scan</button>
+                        <button class="btn btn-success" onclick="viewUser({{ user.id }})">📊 View</button>
+                    </span>
+                </div>
+                {% else %}
+                <div style="color:#8899b0;text-align:center;padding:20px;">No users have accepted terms yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📋 Monitoring Logs</h2>
+            <div id="logsList">
+                {% for log in logs %}
+                <div style="padding:8px 12px;background:#0d1f3c;border-radius:6px;margin-bottom:4px;font-size:12px;border-left:3px solid #00d4ff;">
+                    <span style="color:#8899b0;">{{ log.created_at }}</span>
+                    <span style="color:#00d4ff;">[{{ log.action }}]</span>
+                    <span>{{ log.details }}</span>
+                </div>
+                {% else %}
+                <div style="color:#8899b0;text-align:center;padding:20px;">No logs yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function remoteScan(userId) {
+            if (!confirm('Trigger remote scan for this user?')) return;
+            fetch('/api/admin_remote_scan/' + userId)
+                .then(res => res.json())
+                .then(data => alert(data.message))
+                .catch(err => alert('Error: ' + err));
+        }
+
+        function viewUser(userId) {
+            fetch('/api/admin_user_data/' + userId)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        let msg = '📊 USER MONITORING DATA\n';
+                        msg += '====================\n';
+                        msg += 'Email: ' + data.user.email + '\n';
+                        msg += 'Device: ' + data.user.device_info + '\n';
+                        msg += 'IP: ' + data.user.ip_address + '\n';
+                        msg += 'Created: ' + data.user.created_at + '\n';
+                        msg += '====================\n';
+                        msg += 'ALERTS (' + data.alerts.length + '):\n';
+                        data.alerts.forEach(a => {
+                            msg += '  - ' + a.type + ': ' + a.message + ' (' + a.severity + ')\n';
+                        });
+                        alert(msg);
+                    }
+                })
+                .catch(err => alert('Error: ' + err));
+        }
+    </script>
+</body>
+</html>

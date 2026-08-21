@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background:#0a1628;
+            font-family:'Segoe UI',sans-serif;
+            color:#e0e8f0;
+            padding:20px;
+        }
+        .container { max-width:1000px; margin:auto; }
+        .header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:20px 0;
+            border-bottom:1px solid #1a3b7a;
+            margin-bottom:30px;
+        }
+        .header h1 { color:#00d4ff; }
+        .btn-logout {
+            background:#b71c1c; color:white; border:none;
+            padding:8px 20px; border-radius:8px; cursor:pointer;
+        }
+        .stats-grid {
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+            gap:20px;
+            margin-bottom:30px;
+        }
+        .stat-card {
+            background:#132b5a;
+            padding:20px;
+            border-radius:12px;
+            border:1px solid #1a3b7a;
+            text-align:center;
+        }
+        .stat-card .number {
+            font-size:32px;
+            font-weight:bold;
+            color:#00d4ff;
+        }
+        .stat-card .number.danger { color:#ff1744; }
+        .stat-card .label { color:#8899b0; font-size:14px; margin-top:5px; }
+        .card {
+            background:#132b5a;
+            padding:20px;
+            border-radius:12px;
+            border:1px solid #1a3b7a;
+            margin-bottom:20px;
+        }
+        .card h2 { color:#00d4ff; margin-bottom:15px; display:flex; justify-content:space-between; }
+        .btn {
+            background:#00d4ff; color:#0a1628; border:none;
+            padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;
+        }
+        .btn:hover { opacity:0.8; }
+        .btn-resolve {
+            background:#00e676; color:#0a1628; border:none;
+            padding:4px 12px; border-radius:4px; cursor:pointer; font-size:12px;
+        }
+        .empty { color:#8899b0; text-align:center; padding:20px; }
+        .alert-item {
+            padding:10px 14px;
+            background:#0d1f3c;
+            border-radius:8px;
+            margin-bottom:8px;
+            border-left:4px solid #00d4ff;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            flex-wrap:wrap;
+            gap:6px;
+        }
+        .alert-item .severity-critical { border-left-color:#ff1744; }
+        .alert-item .severity-high { border-left-color:#ff9100; }
+        .alert-item .severity-medium { border-left-color:#ffc107; }
+        .alert-item .severity-low { border-left-color:#00e676; }
+        .alert-item .time { color:#8899b0; font-size:11px; }
+        .alert-item .location { color:#8899b0; font-size:11px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡 CloudShield</h1>
+            <div>
+                <span style="color:#8899b0;margin-right:16px;">{{ email }}</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="number" id="files">0</div><div class="label">📁 Protected Files</div></div>
+            <div class="stat-card"><div class="number danger" id="threats">0</div><div class="label">⚠️ Threats Found</div></div>
+            <div class="stat-card"><div class="number" id="alerts">0</div><div class="label">🔔 Active Alerts</div></div>
+        </div>
+
+        <div class="card">
+            <h2>🔍 Security Scan</h2>
+            <button class="btn" onclick="scanNow()">Start Scan Now</button>
+            <span id="scanStatus" style="margin-left:16px;color:#8899b0;"></span>
+        </div>
+
+        <div class="card">
+            <h2>📋 Recent Alerts <span id="alertCount" style="color:#8899b0;font-size:14px;font-weight:400;"></span></h2>
+            <div id="alertsList"><div class="empty">No alerts yet. Run a scan to check for threats.</div></div>
+        </div>
+    </div>
+
+    <script>
+        async function loadDashboard() {
+            try {
+                const res = await fetch('/api/dashboard_stats');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('files').textContent = data.stats.total_files || 0;
+                    document.getElementById('threats').textContent = data.stats.threats_count || 0;
+                    document.getElementById('alerts').textContent = data.stats.alerts_count || 0;
+                    document.getElementById('alertCount').textContent = data.stats.alerts_count + ' alerts';
+
+                    const alertsContainer = document.getElementById('alertsList');
+                    if (data.alerts && data.alerts.length > 0) {
+                        alertsContainer.innerHTML = data.alerts.map(a => {
+                            const sevClass = a.severity.toLowerCase();
+                            return `
+                                <div class="alert-item severity-${sevClass}">
+                                    <div>
+                                        <strong>${a.type}</strong>
+                                        <p style="font-size:13px;color:#c0d0e0;">${a.message}</p>
+                                        <div class="location">📍 ${a.location || 'Unknown'}</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <span class="time">${a.created_at}</span>
+                                        ${a.resolved == 0 ? `<button class="btn-resolve" onclick="resolveAlert(${a.id})">✅ Resolve</button>` : '<span style="color:#00e676;">✅ Resolved</span>'}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        alertsContainer.innerHTML = '<div class="empty">✅ No alerts. System is secure.</div>';
+                    }
+                }
+            } catch(e) {
+                console.error('Error loading dashboard:', e);
+            }
+        }
+
+        async function scanNow() {
+            document.getElementById('scanStatus').textContent = '🔄 Scanning...';
+            try {
+                const res = await fetch('/api/scan_now', { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('scanStatus').textContent = '✅ ' + data.message;
+                loadDashboard();
+            } catch(e) {
+                document.getElementById('scanStatus').textContent = '❌ Error scanning';
+            }
+        }
+
+        async function resolveAlert(alertId) {
+            try {
+                const res = await fetch('/api/resolve_alert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ alert_id: alertId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadDashboard();
+                }
+            } catch(e) {
+                alert('Error resolving alert');
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+            } catch(e) {
+                window.location.href = '/';
+            }
+        }
+
+        loadDashboard();
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>

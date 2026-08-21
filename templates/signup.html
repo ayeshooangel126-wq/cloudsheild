@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudShield - Signup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a1628;
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: #132b5a;
+            border-radius: 24px;
+            padding: 40px;
+            width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .logo { text-align: center; margin-bottom: 28px; }
+        .logo h1 { font-size: 28px; font-weight: 700; color: #00d4ff; }
+        .logo p { color: #8899b0; font-size: 14px; margin-top: 4px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; color: #c0d0e0; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 16px; background: #0d1f3c; border: 1px solid #1a3b7a;
+            border-radius: 12px; color: #e0e8f0; font-size: 14px; outline: none;
+        }
+        .form-group input:focus { border-color: #00d4ff; }
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary { background: #00d4ff; color: #0a1628; }
+        .btn-primary:hover { background: #00b8d4; transform: translateY(-2px); }
+        .btn-secondary { background: #7c4dff; color: white; margin-top: 12px; }
+        .btn-secondary:hover { background: #651fff; transform: translateY(-2px); }
+        .alert {
+            padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; display: none; font-weight: 500;
+        }
+        .alert-success { background: #1b5e20; color: #a5d6a7; display: block; }
+        .alert-danger { background: #b71c1c; color: #ef9a9a; display: block; }
+        .links { text-align: center; margin-top: 18px; color: #8899b0; font-size: 14px; }
+        .links a { color: #00d4ff; text-decoration: none; font-weight: 600; }
+        .hidden { display: none; }
+        .otp-box { display: none; margin-top: 16px; }
+        .otp-box.show { display: block; }
+        #termsBox { display: none; margin-top: 20px; }
+        #termsBox .terms-text {
+            background: #0d1f3c; padding: 16px; border-radius: 12px; margin-bottom: 16px;
+            color: #c0d0e0; font-size: 13px; line-height: 1.7;
+        }
+        #termsBox .terms-text strong { color: #00d4ff; }
+        .checkbox-group {
+            display: flex; align-items: center; gap: 10px; color: #c0d0e0; font-size: 14px; margin-bottom: 16px;
+        }
+        .checkbox-group input { width: 18px; height: 18px; accent-color: #00d4ff; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🛡 CloudShield</h1>
+            <p>Create Your Account</p>
+        </div>
+        <div id="alertBox" class="alert"></div>
+        <form id="signupForm">
+            <div class="form-group">
+                <label>Gmail Address</label>
+                <input type="email" id="email" placeholder="your.email@gmail.com" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Min 8 characters" required>
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="confirm" placeholder="Confirm password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Sign Up</button>
+        </form>
+        <form id="otpForm" class="otp-box">
+            <div class="form-group">
+                <label>Enter OTP (sent to your email)</label>
+                <input type="text" id="otp" placeholder="Enter 6-digit OTP" maxlength="6">
+            </div>
+            <button type="submit" class="btn btn-primary">Verify OTP</button>
+        </form>
+        <div id="termsBox">
+            <div class="terms-text">
+                <strong>📋 Terms & Conditions</strong><br><br>
+                1. You agree to use CloudShield for lawful purposes only.<br>
+                2. Your data is encrypted and stored locally.<br>
+                3. You will not share your account credentials.<br>
+                4. CloudShield is provided "as is" without warranty.<br>
+                5. You agree to receive security alerts via email.<br>
+                6. You can delete your account at any time.
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="termsCheck"> I agree to the Terms & Conditions
+            </div>
+            <button id="acceptTermsBtn" class="btn btn-primary" disabled>Continue to Dashboard</button>
+        </div>
+        <div class="links">
+            Already have an account? <a href="/">Login</a>
+        </div>
+    </div>
+    <script>
+        let userEmail = '';
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm').value;
+            if (password !== confirm) {
+                showAlert('danger', 'Passwords do not match'); return;
+            }
+            if (password.length < 8) {
+                showAlert('danger', 'Password must be at least 8 characters'); return;
+            }
+            const response = await fetch('/api/signup', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
+            const data = await response.json();
+            if (data.success) {
+                userEmail = email;
+                showAlert('success', data.message);
+                document.getElementById('signupForm').style.display = 'none';
+                document.getElementById('otpForm').classList.add('show');
+            } else {
+                showAlert('danger', data.message);
+            }
+        });
+        document.getElementById('otpForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const otp = document.getElementById('otp').value;
+            const response = await fetch('/api/verify_otp', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: userEmail, otp})
+            });
+            const data = await response.json();
+            if (data.success) {
+                showAlert('success', data.message);
+                document.getElementById('otpForm').classList.remove('show');
+                document.getElementById('termsBox').style.display = 'block';
+            } else {
+                showAlert('danger', data.message);
+            }
+        });
+        document.getElementById('termsCheck').addEventListener('change', function() {
+            document.getElementById('acceptTermsBtn').disabled = !this.checked;
+        });
+        document.getElementById('acceptTermsBtn').addEventListener('click', async function() {
+            const response = await fetch('/api/accept_terms', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: userEmail})
+            });
+            const data = await response.json();
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => window.location.href = '/dashboard', 1000);
+            } else {
+                showAlert('danger', data.message);
+            }
+        });
+        function showAlert(type, message) {
+            const box = document.getElementById('alertBox');
+            box.className = 'alert';
+            box.classList.add('alert-' + type);
+            box.textContent = message;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 5000);
+        }
+    </script>
+</body>
+</html>
